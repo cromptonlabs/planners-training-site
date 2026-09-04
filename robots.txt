@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /standards_docs/
+Disallow: /tmd_docs/
+Disallow: /_auth_
+Disallow: /portal-auth-config
+
+Sitemap: https://training.cromptonapps.com.au/
