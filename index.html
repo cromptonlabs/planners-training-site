@@ -280,19 +280,16 @@
             z-index: -1;
         }
 
-        /* Soft gate: dim sidebar only — never blur the landing / main content
-           (blurring .main made the whole page look broken, especially on mobile). */
+        /* Guest landing: do not disable clicks. Auth gate is content-only. */
         body.app-locked { overflow: auto; }
-        body.app-locked .sidebar {
-            opacity: 0.55;
-            pointer-events: none;
-            user-select: none;
-        }
+        body.app-locked .sidebar,
         body.app-locked .main {
             filter: none;
             pointer-events: auto;
             user-select: auto;
+            opacity: 1;
         }
+        body.app-locked .modal.auth-modal .modal-close { display: block !important; }
 
         .section {
             display: none;
@@ -4999,7 +4996,6 @@
             backdrop-filter: blur(8px);
         }
         body.app-locked .modal.auth-modal { z-index: 3500; }
-        body.app-locked .modal.auth-modal .modal-close { display: none; }
         .modal.auth-modal .modal-panel {
             width: min(460px, 94vw);
             background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
@@ -5549,7 +5545,7 @@
             <span>Certificates</span>
         </div>
 
-        <div id="navPricing" class="nav-link" data-tab="pricing" data-protected-nav="true" onclick="showTab('pricing', this)">
+        <div id="navPricing" class="nav-link" data-tab="pricing" data-protected-nav="true" onclick="showTab('pricing', this)" style="display:none;" aria-hidden="true">
             <span class="nav-num">08</span>
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span>Pricing &amp; Plans</span>
@@ -5602,11 +5598,10 @@
                         <h1>Training for <em>Australian</em><br>Traffic Management</h1>
                         <p class="ae-lede">Standards library, recorded training sessions, RapidPlan tutorials, quizzes, and certificates — all in one portal.</p>
                         <div class="ae-cta-row">
-                            <button class="auth-entry-btn primary" type="button" onclick="showTab('docs', document.getElementById('navDocs'))">Browse standards</button>
-                            <a class="auth-entry-btn secondary" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;" href="mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request">Request access</a>
-                            <button class="auth-entry-btn secondary" type="button" onclick="openAuthModal('signin')">Sign in</button>
+                            <button class="auth-entry-btn primary" type="button" onclick="openAuthModal('signin')">Sign in</button>
+                            <button class="auth-entry-btn secondary" type="button" onclick="openAuthModal('signup')">Create account</button>
                         </div>
-                        <p class="ae-sub-note">Standards and reference are free to browse. Training videos and certificates need a Crompton Academy account.</p>
+                        <p class="ae-sub-note">Sign in once to unlock the full academy — standards, videos, quizzes, and certificates. No plan tiers.</p>
                     </div>
 
                     <!-- What's inside -->
@@ -7229,7 +7224,7 @@
         <!-- ============================
              07 — PRICING & PLANS
              ============================ -->
-        <section id="pricing" class="section">
+        <section id="pricing" class="section" style="display:none !important;" aria-hidden="true">
             <header class="page-header">
                 <div class="page-eyebrow">Section 08 — Pricing</div>
                 <h1 class="page-title">Choose the <em>plan</em> that fits your team.</h1>
@@ -7948,10 +7943,10 @@
             checkoutDraft: 'cromton.checkout.v1'
         };
 
-        // Tabs that require sign-in. Free public browsing: overview, docs, reference, pricing.
-        const PROTECTED_TABS = new Set(['vids', 'tmd', 'learning', 'certificates']);
-        const PUBLIC_TABS = new Set(['authEntry', 'overview', 'docs', 'reference', 'pricing']);
-        // Local demo seed only — no hardcoded credentials (Firebase Auth is the real login).
+        // Tabs that require sign-in. After login, all features are unlocked (no plan tiers).
+        const PROTECTED_TABS = new Set(['overview', 'vids', 'tmd', 'docs', 'reference', 'learning', 'certificates']);
+        const PUBLIC_TABS = new Set(['authEntry']);
+        // Local demo seed only — no hardcoded credentials.
         const DEFAULT_ADMIN_ACCOUNT = null;
 
         const SimpleHash = {
@@ -8008,34 +8003,20 @@
                 return 'free';
             },
             isPaid() {
-                const u = this.currentUser();
-                if (!u) return false;
-                const plan = this.normalizePlan(u.plan);
-                if (plan === 'free') return false;
-                if (this.isPlanExpired(u)) return false;
-                return true;
+                return this.isLoggedIn();
             },
             isPlanExpired(user) {
-                if (!user || user.expiresAt == null || user.expiresAt === '') return false;
-                const ts = Number(user.expiresAt);
-                return Number.isFinite(ts) && ts > 0 && ts < Date.now();
+                return false;
             },
             currentPlan() {
-                const u = this.currentUser();
-                if (!u) return 'free';
-                if (this.isPlanExpired(u)) return 'free';
-                return this.normalizePlan(u.plan);
+                // No plan tiers — signed-in users have full access.
+                return this.isLoggedIn() ? 'enterprise' : 'free';
             },
             hasFeatureAccess(featureLevel) {
-                // Tiers: free < basic < pro < enterprise
-                // Pro and Enterprise both unlock all recorded training videos.
-                const tierOrder = { free: 0, basic: 1, pro: 2, enterprise: 3 };
-                const userTier = tierOrder[this.currentPlan()] ?? 0;
-                const requiredTier = tierOrder[this.normalizePlan(featureLevel)] ?? 0;
-                return userTier >= requiredTier;
+                return this.isLoggedIn();
             },
             canAccessAllVideos() {
-                return this.hasFeatureAccess('pro');
+                return this.isLoggedIn();
             },
             signUp(email, password, name, company) {
                 email = (email || '').toLowerCase().trim();
@@ -8049,7 +8030,7 @@
                     name: (name || email.split('@')[0]).trim(),
                     company: (company || '').trim(),
                     pwd: SimpleHash.hash(password + ':' + email),
-                    plan: (window.PORTAL_AUTH_CONFIG && PORTAL_AUTH_CONFIG.localSignupPlan) || 'free',
+                    plan: 'enterprise',
                     createdAt: Date.now(),
                     expiresAt: null
                 };
@@ -8195,13 +8176,9 @@
                         </div>
                     </div>
                     <div>
-                        <span class="plan-badge ${planClass}">${planMeta.name}${user.billingCycle === 'annual' ? ' · ANNUAL' : ''}</span>
-                        ${isExpiringSoon ? '<span class="plan-badge" style="background:rgba(184,71,42,0.22); color:#f0a98e; border:1px solid rgba(184,71,42,0.55); margin-left:0.3rem;">RENEWS SOON</span>' : ''}
+                        <span class="plan-badge enterprise">Full access</span>
                     </div>
                     <div class="acct-actions">
-                        ${plan === 'free'
-                            ? '<button class="acct-btn primary" onclick="showTab(\'pricing\', document.getElementById(\'navPricing\'))">Upgrade</button>'
-                            : '<button class="acct-btn" onclick="showTab(\'pricing\', document.getElementById(\'navPricing\'))">Manage</button>'}
                         <button class="acct-btn" onclick="Auth.signOut()">Sign out</button>
                         ${isPortalAdmin(user)
                             ? '<a class="acct-btn" href="admin.html" target="_blank" style="text-align:center;text-decoration:none;">⚙ Admin Panel</a>'
@@ -8252,26 +8229,22 @@
         let _authPostAction = null; // optional callback after success
 
         function openAuthModal(mode = 'signin', postAction = null, options = {}) {
-            const forceLock = !!(options && options.forceLock);
             if (postAction !== null) _authPostAction = postAction;
             setAuthMode(mode);
             const modal = document.getElementById('authModal');
-            const wasOpen = modal.classList.contains('open');
-            if (!wasOpen || !forceLock) {
-                document.getElementById('authError').style.display = 'none';
-                document.getElementById('authForm').reset();
-            }
-            if (forceLock) document.body.classList.add('app-locked');
+            document.getElementById('authError').style.display = 'none';
+            document.getElementById('authForm').reset();
             modal.classList.add('open');
             document.body.style.overflow = 'hidden';
             setTimeout(() => document.getElementById('authEmail').focus(), 80);
         }
 
         function closeAuthModal(event) {
-            if (document.body.classList.contains('app-locked')) return;
-            if (event && event.target && event.target.id !== 'authModal') return;
+            // Backdrop click: only close when the modal root itself is the target.
+            if (event && event.target && event.target.id && event.target.id !== 'authModal') return;
             document.getElementById('authModal').classList.remove('open');
             document.body.style.overflow = '';
+            document.body.classList.remove('app-locked');
             _authPostAction = null;
         }
 
@@ -8347,8 +8320,8 @@
             const users = Auth.getUsers();
             const key = (email || '').toLowerCase().trim();
             const record = users[key] || { email: key };
-            if (!record.plan || record.plan === 'free') {
-                record.plan = (window.PORTAL_AUTH_CONFIG && PORTAL_AUTH_CONFIG.localSignupPlan) || 'free';
+            if (!record.plan || record.plan === 'free' || record.plan === 'basic' || record.plan === 'pro') {
+                record.plan = 'enterprise';
             }
             record.pwd = SimpleHash.hash(password + ':' + key);
             users[key] = record;
@@ -8738,11 +8711,8 @@
         // Figure out what plan a video requires.
         // Pro and Enterprise both unlock all recorded Crompton training.
         function videoRequiredPlan(video) {
-            if (!video) return 'free';
-            // Invarion / YouTube tutorials → Basic plan
-            if (isYouTubeUrl(video.url)) return 'basic';
-            // Crompton recorded training → Professional (Enterprise inherits via tier)
-            return 'pro';
+            // No plan tiers — any signed-in user can watch everything.
+            return 'free';
         }
 
         function refreshPaywallUI() {
@@ -10358,12 +10328,10 @@
             updateGlobalSearchState();
 
             if (locked) {
-                // Keep landing sharp — no forced modal / full-page blur (Firebase may be unavailable).
-                document.body.classList.add('app-locked');
+                document.body.classList.remove('app-locked');
                 document.getElementById('authModal')?.classList.remove('open');
                 document.body.style.overflow = '';
-                const want = preferredTab && PUBLIC_TABS.has(preferredTab) ? preferredTab : 'authEntry';
-                activateTab(want, getNavLinkForTab(want) || document.getElementById('navAuth'));
+                activateTab('authEntry', document.getElementById('navAuth'));
                 return;
             }
 
@@ -10371,28 +10339,39 @@
             document.getElementById('authModal')?.classList.remove('open');
             document.body.style.overflow = '';
 
-            // Re-render video grids so lock overlays reflect the signed-in plan
+            // Promote existing local accounts to full access (no plan tiers).
+            try {
+                const u = Auth.currentUser();
+                if (u) {
+                    const users = Auth.getUsers();
+                    const key = (u.email || '').toLowerCase();
+                    if (users[key]) {
+                        users[key].plan = 'enterprise';
+                        users[key].expiresAt = null;
+                        Auth.saveUsers(users);
+                    }
+                }
+            } catch (_) {}
+
             applyVideoFilters();
             applyTmdFilters();
 
             const currentActiveId = document.querySelector('.section.active')?.id;
             const targetTab = preferredTab && preferredTab !== 'authEntry'
                 ? preferredTab
-                : (PROTECTED_TABS.has(currentActiveId) || PUBLIC_TABS.has(currentActiveId) ? currentActiveId : 'overview');
+                : (currentActiveId && currentActiveId !== 'authEntry' ? currentActiveId : 'overview');
             activateTab(targetTab, getNavLinkForTab(targetTab));
         }
 
         function showTab(id, activeLink) {
-            if (PROTECTED_TABS.has(id) && !Auth.isLoggedIn()) {
-                activateTab('authEntry', document.getElementById('navAuth'));
-                showToast('Sign in required', 'Request access or sign in to open training videos and certificates.', 'warning', 4500);
+            if (id === 'pricing') {
+                activateTab('overview', document.getElementById('navOverview'));
                 return;
             }
-
-            // Free users cannot access the training libraries — redirect to pricing
-            if ((id === 'vids' || id === 'tmd') && Auth.isLoggedIn() && !Auth.hasFeatureAccess('basic')) {
-                showToast('Upgrade required', 'Video training requires the Basic plan or higher.', 'warning');
-                activateTab('pricing', document.getElementById('navPricing'));
+            if (PROTECTED_TABS.has(id) && !Auth.isLoggedIn()) {
+                activateTab('authEntry', document.getElementById('navAuth'));
+                openAuthModal('signin');
+                showToast('Sign in required', 'Create an account or sign in to open the academy.', 'warning', 4500);
                 return;
             }
 

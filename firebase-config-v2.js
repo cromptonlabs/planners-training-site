@@ -14,6 +14,10 @@
 //  satisfied by portal sign-ins.
 // ============================================================
 
+// GCP/Firebase project removed — use local browser accounts only until a
+// non-Google auth provider is wired up. Keeps the portal usable on GitHub Pages.
+window.PT_AUTH_LOCAL_ONLY = true;
+
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyBwagGuH39hby-W2vtp9OpRFzKPoAQmZeA",
   authDomain:        "crompton-training-app.firebaseapp.com",

@@ -317,6 +317,7 @@
    * Returns true if Firebase sync is active.
    */
   function isEnabled() {
+    if (window.PT_AUTH_LOCAL_ONLY) return false;
     return _syncEnabled && !!_db;
   }
 

@@ -213,6 +213,7 @@
   }
 
   function isEnabled() {
+    if (window.PT_AUTH_LOCAL_ONLY) return false;
     return !!_auth;
   }
 
