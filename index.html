@@ -280,13 +280,18 @@
             z-index: -1;
         }
 
-        /* TIA-style lock gate: blur and disable app until authenticated */
-        body.app-locked { overflow: hidden; }
-        body.app-locked .sidebar,
-        body.app-locked .main {
-            filter: blur(5px);
+        /* Soft gate: dim sidebar only — never blur the landing / main content
+           (blurring .main made the whole page look broken, especially on mobile). */
+        body.app-locked { overflow: auto; }
+        body.app-locked .sidebar {
+            opacity: 0.55;
             pointer-events: none;
             user-select: none;
+        }
+        body.app-locked .main {
+            filter: none;
+            pointer-events: auto;
+            user-select: auto;
         }
 
         .section {
@@ -5496,6 +5501,12 @@
 
         <div class="nav-label">Navigate</div>
 
+        <div id="navAuth" class="nav-link" data-tab="authEntry" onclick="showTab('authEntry', this)">
+            <span class="nav-num">00</span>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Sign In / Sign Up</span>
+        </div>
+
         <div id="navOverview" class="nav-link" data-tab="overview" data-protected-nav="true" onclick="showTab('overview', this)">
             <span class="nav-num">01</span>
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
@@ -5591,10 +5602,11 @@
                         <h1>Training for <em>Australian</em><br>Traffic Management</h1>
                         <p class="ae-lede">Standards library, recorded training sessions, RapidPlan tutorials, quizzes, and certificates — all in one portal.</p>
                         <div class="ae-cta-row">
-                            <a class="auth-entry-btn primary" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;" href="mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request">Request access</a>
-                            <a class="auth-entry-btn secondary" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;" href="https://cromptonapps.com">cromptonapps.com</a>
+                            <button class="auth-entry-btn primary" type="button" onclick="showTab('docs', document.getElementById('navDocs'))">Browse standards</button>
+                            <a class="auth-entry-btn secondary" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;" href="mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request">Request access</a>
+                            <button class="auth-entry-btn secondary" type="button" onclick="openAuthModal('signin')">Sign in</button>
                         </div>
-                        <p class="ae-sub-note">Access is provided by Crompton Labs &mdash; email us to set up training for your team.</p>
+                        <p class="ae-sub-note">Standards and reference are free to browse. Training videos and certificates need a Crompton Academy account.</p>
                     </div>
 
                     <!-- What's inside -->
@@ -7226,7 +7238,7 @@
 
             <div class="trial-banner">
                 <span class="trial-banner-icon">i</span>
-                <span><strong>Note:</strong> Plans are arranged directly with Crompton Labs &mdash; no payment details are collected on this site. Email <a href="mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request">labs@cromptonapps.com</a> for team access.</span>
+                <span><strong>Trial Mode:</strong> This is a demonstration payment portal. No actual charges will be made. The integration point for a real payment processor (Stripe, Square, Paddle) is clearly marked in code.</span>
             </div>
 
             <div class="pricing-hero-banner">
@@ -7342,7 +7354,6 @@
             <div class="footer-grid">
                 <div>
                     <h5>About this portal</h5>
-                    <p style="margin-bottom:0.9rem;"><strong>Crompton Labs</strong> &middot; <a href="https://cromptonapps.com">cromptonapps.com</a> &middot; <a href="mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request">labs@cromptonapps.com</a></p>
                     <p><strong>Crompton Academy</strong> is operated by <strong>Crompton Labs</strong> (Crompton Apps). It is a private B2B training portal for temporary traffic management planners. Standards links go to official road-authority websites. This site is not affiliated with Austroads, TfNSW, TMR, VicRoads, Main Roads WA, or any government agency, and does not replace formal accreditation.</p>
                 </div>
                 <div>
@@ -7517,8 +7528,197 @@
     </div>
 
     <!-- ============================
+         AUTH MODAL (Sign in / Sign up)
+         ============================ -->
+    <div id="authModal" class="modal auth-modal" onclick="closeAuthModal(event)">
+        <div class="modal-panel" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="authModalTitle">Sign in to Crompton Academy</h3>
+                <button class="modal-close" onclick="closeAuthModal()" aria-label="Close">&times;</button>
+            </div>
+            <div class="auth-body">
+                <div class="auth-head">
+                    <div class="auth-logo-chip">CA</div>
+                    <h3 class="auth-main-title" id="authMainTitle">Sign in to Crompton Academy</h3>
+                    <p class="auth-subtitle" id="authSubtitle">Access standards, training videos, quizzes, and certificates.</p>
+                    <p class="auth-ownership" style="margin:0.75rem 0 0;font-size:0.78rem;line-height:1.45;color:#5a6577;">
+                        This login is for your <strong>Crompton Academy</strong> account, operated by <strong>Crompton Labs</strong>.
+                        It is not a Google, Microsoft, bank, or government sign-in page.
+                    </p>
+                </div>
+                <div class="auth-tabs" role="tablist">
+                    <button class="auth-tab active" data-mode="signin" onclick="setAuthMode('signin')">Sign In</button>
+                    <button class="auth-tab" data-mode="signup" onclick="setAuthMode('signup')">Create Account</button>
+                </div>
+
+                <form class="auth-form" id="authForm" onsubmit="handleAuthSubmit(event)">
+                    <div class="auth-field-group" id="authNameRow" style="display:none;">
+                        <label for="authName">Full Name</label>
+                        <div class="auth-input-wrap" data-icon="👤">
+                            <input type="text" id="authName" autocomplete="name" placeholder="Jane Smith">
+                        </div>
+                    </div>
+                    <div class="auth-field-group">
+                        <label for="authEmail" id="authEmailLabel">Crompton Academy email</label>
+                        <div class="auth-input-wrap" data-icon="✉">
+                            <input type="email" id="authEmail" autocomplete="username" placeholder="you@company.com" required>
+                        </div>
+                    </div>
+                    <div class="auth-field-group">
+                        <label for="authPassword">Crompton Academy password</label>
+                        <div class="auth-input-wrap" data-icon="🔒">
+                            <input type="password" id="authPassword" autocomplete="current-password" placeholder="At least 6 characters" minlength="6" required>
+                        </div>
+                    </div>
+                    <div class="auth-field-group" id="authCompanyRow" style="display:none;">
+                        <label for="authCompany">Company / Organisation <span style="color:#94a3b8; font-weight:400; text-transform:none;">(optional)</span></label>
+                        <div class="auth-input-wrap" data-icon="🏢">
+                            <input type="text" id="authCompany" autocomplete="organization" placeholder="ABC Civil">
+                        </div>
+                    </div>
+                    <div class="form-error-msg" id="authError" style="display:none;"></div>
+                    <button type="submit" class="auth-submit" id="authSubmit">Sign In to Crompton Academy</button>
+                    <p class="auth-meta" id="authForgotRow" style="margin-top:0.65rem;">
+                        <a href="#" onclick="handleForgotPassword(); return false;">Forgot password?</a>
+                    </p>
+                    <p class="auth-meta" id="authMeta">Don't have an account? <a href="#" onclick="setAuthMode('signup'); return false;">Create one</a></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================
          CHECKOUT MODAL (Trial Mode)
          ============================ -->
+    <div id="checkoutModal" class="modal checkout-modal" onclick="closeCheckoutModal(event)">
+        <div class="modal-panel" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Subscribe to Crompton Academy</h3>
+                <button class="modal-close" onclick="closeCheckoutModal()" aria-label="Close">&times;</button>
+            </div>
+            <div class="checkout-body">
+                <div class="trial-banner">
+                    <span class="trial-banner-icon">i</span>
+                    <span><strong>No card details on this site.</strong> Crompton Academy does not collect credit cards, bank passwords, or third-party credentials here. Plan activation is handled by Crompton Labs (or a future payment provider on a dedicated checkout).</span>
+                </div>
+
+                <div class="checkout-steps">
+                    <div class="checkout-step-pip active" data-pip="1"><span class="dot">1</span><span>Plan</span></div>
+                    <div class="checkout-step-conn"></div>
+                    <div class="checkout-step-pip" data-pip="2"><span class="dot">2</span><span>Account</span></div>
+                    <div class="checkout-step-conn"></div>
+                    <div class="checkout-step-pip" data-pip="3"><span class="dot">3</span><span>Confirm</span></div>
+                    <div class="checkout-step-conn"></div>
+                    <div class="checkout-step-pip" data-pip="4"><span class="dot">4</span><span>Done</span></div>
+                </div>
+
+                <!-- STEP 1: PLAN -->
+                <div class="checkout-step active" data-step="1">
+                    <h3>Choose your plan</h3>
+                    <p class="step-sub">You can change or cancel anytime from your account.</p>
+                    <div class="billing-toggle" style="margin-bottom: 1.25rem;">
+                        <button class="active" data-billing-checkout="monthly" onclick="setCheckoutBilling('monthly')">Monthly</button>
+                        <button data-billing-checkout="annual" onclick="setCheckoutBilling('annual')">Annual <span class="save-tag">SAVE 17%</span></button>
+                    </div>
+                    <div class="plan-select-grid" id="checkoutPlanGrid"></div>
+                    <div class="checkout-actions">
+                        <button class="btn-secondary" onclick="closeCheckoutModal()">Cancel</button>
+                        <button class="btn-primary-checkout" id="ckStep1Next" onclick="checkoutNext(1)">Continue →</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: ACCOUNT -->
+                <div class="checkout-step" data-step="2">
+                    <h3>Your details</h3>
+                    <p class="step-sub" id="ckStep2Sub">Create an account so we can save your progress and certificates.</p>
+
+                    <form id="checkoutAccountForm" onsubmit="event.preventDefault(); checkoutNext(2);">
+                        <div class="form-row split">
+                            <div class="form-row" style="margin-bottom:0;">
+                                <label class="form-label" for="ckFirstName">First Name</label>
+                                <input class="form-input" type="text" id="ckFirstName" required>
+                            </div>
+                            <div class="form-row" style="margin-bottom:0;">
+                                <label class="form-label" for="ckLastName">Last Name</label>
+                                <input class="form-input" type="text" id="ckLastName" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label" for="ckEmail">Email Address</label>
+                            <input class="form-input" type="email" id="ckEmail" required>
+                        </div>
+                        <div class="form-row" id="ckPasswordRow">
+                            <label class="form-label" for="ckPassword">Password</label>
+                            <input class="form-input" type="password" id="ckPassword" minlength="6" placeholder="At least 6 characters">
+                        </div>
+                        <div class="form-row split">
+                            <div class="form-row" style="margin-bottom:0;">
+                                <label class="form-label" for="ckCompany">Company <span style="color:var(--ink-faint); font-weight:normal;">(optional)</span></label>
+                                <input class="form-input" type="text" id="ckCompany">
+                            </div>
+                            <div class="form-row" style="margin-bottom:0;">
+                                <label class="form-label" for="ckCountry">Country</label>
+                                <select class="form-input" id="ckCountry">
+                                    <option value="AU" selected>Australia</option>
+                                    <option value="NZ">New Zealand</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="form-error-msg" id="ckStep2Error" style="display:none;"></div>
+
+                    <div class="checkout-actions">
+                        <button class="btn-secondary" onclick="checkoutBack(2)">← Back</button>
+                        <button class="btn-primary-checkout" id="ckStep2Next" onclick="checkoutNext(2)">Continue to confirm →</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: CONFIRM (no card collection — AUP / phishing-safe) -->
+                <div class="checkout-step" data-step="3">
+                    <h3>Confirm your plan request</h3>
+                    <p class="step-sub">This site never asks for credit card, bank, Google, Microsoft, or government passwords. Billing is arranged separately by Crompton Labs.</p>
+
+                    <div style="padding:1rem 1.1rem;border:1px solid var(--rule);border-radius:10px;background:var(--paper-soft);margin-bottom:1rem;">
+                        <p style="margin:0;font-size:0.9rem;line-height:1.5;color:var(--ink-mid);">
+                            Submit this request to activate a <strong>trial plan</strong> on your Crompton Academy account.
+                            For paid invoicing, email <a href="mailto:labs@cromptonapps.com">labs@cromptonapps.com</a>.
+                        </p>
+                    </div>
+
+                    <div class="order-summary" id="ckOrderSummary"></div>
+
+                    <div class="form-error-msg" id="ckStep3Error" style="display:none;"></div>
+
+                    <div class="checkout-actions">
+                        <button class="btn-secondary" onclick="checkoutBack(3)">← Back</button>
+                        <button class="btn-primary-checkout" id="ckStep3Submit" onclick="processPayment()">
+                            <span id="ckStep3SubmitLabel">Activate trial access</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 4: SUCCESS -->
+                <div class="checkout-step" data-step="4">
+                    <div class="checkout-success">
+                        <div class="checkout-success-icon">✓</div>
+                        <h3>Welcome aboard!</h3>
+                        <p class="step-sub" id="ckSuccessSub">Your subscription is active. Enjoy full access to Crompton Academy.</p>
+
+                        <div class="receipt-box" id="ckReceipt"></div>
+
+                        <p style="font-size:0.85rem; color:var(--ink-mute); max-width:480px; margin: 0 auto;">No payment details were collected on this site. Paid billing is arranged with Crompton Labs. Manage access anytime from your account.</p>
+
+                        <div style="margin-top:1.5rem; display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+                            <button class="btn-secondary" onclick="closeCheckoutModal()">Close</button>
+                            <button class="btn-primary-checkout" onclick="closeCheckoutModal(); showTab('vids', document.getElementById('navVids'));">Start Learning →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ============================
          CERTIFICATE PREVIEW MODAL
          ============================ -->
@@ -7549,6 +7749,8 @@
     <script src="tmd_videos_data.js"></script>
     <script src="tmd_docs_data.js"></script>
     <script src="standards_data.js"></script>
+    <!-- Local-only overrides (gitignored; safe to be absent, e.g. on the public build) -->
+    <script src="portal-auth-config.js"></script>
 
     <!-- ============================
          APPLICATION
@@ -7655,7 +7857,7 @@
         let activeVideoUrl = '';
         let activeVideoMeta = null;
         let currentStandardQuizData = null;
-        const QUIZ_API_BASE_URL = 'http://127.0.0.1:8000';
+        const QUIZ_API_BASE_URL = (window.PORTAL_AUTH_CONFIG && PORTAL_AUTH_CONFIG.quizServiceUrl) || 'http://127.0.0.1:8000';
         const VIDEO_PREVIEW_LIMIT_MS = 5 * 60 * 1000;
         const YOUTUBE_PREVIEW_LIMIT_SECONDS = 300;
         const SUBSCRIPTION_URL = '#'; // Kept for legacy; clicks now route through openCheckout()
@@ -7746,7 +7948,9 @@
             checkoutDraft: 'cromton.checkout.v1'
         };
 
-        const PROTECTED_TABS = new Set(['overview', 'vids', 'tmd', 'docs', 'reference', 'learning', 'certificates', 'pricing']);
+        // Tabs that require sign-in. Free public browsing: overview, docs, reference, pricing.
+        const PROTECTED_TABS = new Set(['vids', 'tmd', 'learning', 'certificates']);
+        const PUBLIC_TABS = new Set(['authEntry', 'overview', 'docs', 'reference', 'pricing']);
         // Local demo seed only — no hardcoded credentials (Firebase Auth is the real login).
         const DEFAULT_ADMIN_ACCOUNT = null;
 
@@ -7845,7 +8049,7 @@
                     name: (name || email.split('@')[0]).trim(),
                     company: (company || '').trim(),
                     pwd: SimpleHash.hash(password + ':' + email),
-                    plan: 'free',
+                    plan: (window.PORTAL_AUTH_CONFIG && PORTAL_AUTH_CONFIG.localSignupPlan) || 'free',
                     createdAt: Date.now(),
                     expiresAt: null
                 };
@@ -7907,7 +8111,26 @@
         };
 
         function ensureSeedAccounts() {
-            // Intentionally empty — do not ship default passwords in client JS.
+            // Local-only seeding from portal-auth-config.js (gitignored — never
+            // shipped). Creates the admin account in this browser so the portal
+            // is usable when the cloud auth provider is unreachable.
+            const cfg = window.PORTAL_AUTH_CONFIG;
+            const admin = cfg && cfg.defaultAdmin;
+            if (!admin || !admin.email || !admin.password || String(admin.password).length < 6) return;
+            const key = String(admin.email).toLowerCase().trim();
+            const users = Auth.getUsers();
+            if (users[key]) return;
+            users[key] = {
+                email: key,
+                username: admin.username || key.split('@')[0],
+                name: admin.name || 'Administrator',
+                company: admin.company || '',
+                pwd: SimpleHash.hash(admin.password + ':' + key),
+                plan: admin.plan || 'enterprise',
+                createdAt: Date.now(),
+                expiresAt: null
+            };
+            Auth.saveUsers(users);
         }
 
         // ==========================================
@@ -8102,6 +8325,38 @@
             }
         }
 
+        // When the cloud auth provider is unreachable (project disabled,
+        // offline machine, network error), fall back to this browser's local
+        // accounts. First-time users are created locally so training continues.
+        function localFallbackSignIn(email, password) {
+            try {
+                return Auth.signIn(email, password);
+            } catch (localErr) {
+                if (/No account found/i.test(String(localErr.message || ''))) {
+                    return Auth.signUp(email, password);
+                }
+                throw localErr; // e.g. incorrect password for an existing local account
+            }
+        }
+
+        // A cloud sign-up can partially succeed: the Firebase Auth account is
+        // created and the profile cached locally, then the database save fails.
+        // Adopt that local record, enable local password sign-in, and grant the
+        // configured local plan when the cloud profile never landed.
+        function adoptLocalAccount(email, password) {
+            const users = Auth.getUsers();
+            const key = (email || '').toLowerCase().trim();
+            const record = users[key] || { email: key };
+            if (!record.plan || record.plan === 'free') {
+                record.plan = (window.PORTAL_AUTH_CONFIG && PORTAL_AUTH_CONFIG.localSignupPlan) || 'free';
+            }
+            record.pwd = SimpleHash.hash(password + ':' + key);
+            users[key] = record;
+            Auth.saveUsers(users);
+            localStorage.setItem(STORAGE.session, JSON.stringify({ key }));
+            return record;
+        }
+
         async function handleAuthSubmit(event) {
             event.preventDefault();
             const errBox = document.getElementById('authError');
@@ -8118,19 +8373,30 @@
                     const company = document.getElementById('authCompany').value;
                     if (ptAuthActive) {
                         // Real account: credentials live in Firebase Auth, profile in the database.
-                        user = await PTAuth.signUp(email, password, name, company);
+                        try {
+                            user = await PTAuth.signUp(email, password, name, company);
+                        } catch (cloudErr) {
+                            // Cloud sign-up failed partway (auth created, database save
+                            // failed) or is unreachable — keep the account usable locally.
+                            try {
+                                user = Auth.signUp(email, password, name, company);
+                            } catch (localErr) {
+                                if (/already exists/i.test(String(localErr.message || ''))) {
+                                    user = adoptLocalAccount(email, password);
+                                } else {
+                                    throw localErr;
+                                }
+                            }
+                        }
                     } else {
                         user = Auth.signUp(email, password, name, company);
-                        // Sync new account to Firebase. If this fails, rollback local
-                        // account creation to avoid local-only ghost users.
+                        // Best-effort sync to Firebase. A failure (cloud down)
+                        // no longer rolls the local account back — local access
+                        // must keep working while the cloud provider is offline.
                         if (window.PTSync && PTSync.isEnabled()) {
                             const cloudSaved = await PTSync.saveUser(email, user);
                             if (!cloudSaved) {
-                                const users = Auth.getUsers();
-                                delete users[(email || '').toLowerCase().trim()];
-                                Auth.saveUsers(users);
-                                localStorage.removeItem(STORAGE.session);
-                                throw new Error('Account could not be saved to cloud. Please try again.');
+                                console.warn('[Auth] Cloud sync unavailable — account saved locally only.');
                             }
                         }
                     }
@@ -8139,7 +8405,23 @@
                     // Always prefer Firebase Auth for real email accounts so cloud plan
                     // entitlements (pro/enterprise) apply across devices.
                     if (ptAuthActive) {
-                        user = await PTAuth.signIn(email, password);
+                        try {
+                            user = await PTAuth.signIn(email, password);
+                        } catch (cloudErr) {
+                            // Cloud auth unreachable — fall back to local accounts.
+                            // A wrong password must never mint a new local account.
+                            const cloudMsg = String((cloudErr && cloudErr.message) || '');
+                            if (/incorrect/i.test(cloudMsg)) {
+                                try {
+                                    user = Auth.signIn(email, password);
+                                } catch (_) {
+                                    throw cloudErr; // preserve the real credentials error
+                                }
+                            } else {
+                                user = localFallbackSignIn(email, password);
+                            }
+                            showToast('Signed in (local account)', 'Cloud sign-in unavailable — using this browser\'s local account.', 'info', 6000);
+                        }
                     } else {
                         if (window.PTSync && PTSync.isEnabled()) {
                             try {
@@ -8217,7 +8499,7 @@
                     ctaAction = `onclick="contactSales()"`;
                 } else {
                     ctaStyleClass = plan.featured ? 'featured-cta' : '';
-                    ctaAction = `onclick="location.href=\'mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request\';"`;
+                    ctaAction = `onclick="openCheckout('${plan.id}', '${_billingCycle}')"`;
                 }
 
                 const featuresHtml = plan.features.map(f => `<li>${f}</li>`).join('') +
@@ -10069,13 +10351,19 @@
 
         function syncAuthGateState(preferredTab = null) {
             const locked = !Auth.isLoggedIn();
-            document.querySelectorAll('[data-protected-nav="true"]').forEach(link => link.classList.toggle('locked', locked));
+            document.querySelectorAll('[data-protected-nav="true"]').forEach(link => {
+                const tab = link.getAttribute('data-tab');
+                link.classList.toggle('locked', locked && PROTECTED_TABS.has(tab));
+            });
             updateGlobalSearchState();
 
             if (locked) {
+                // Keep landing sharp — no forced modal / full-page blur (Firebase may be unavailable).
                 document.body.classList.add('app-locked');
-                activateTab('authEntry', document.getElementById('navAuth'));
-                openAuthModal('signin', null, { forceLock: true });
+                document.getElementById('authModal')?.classList.remove('open');
+                document.body.style.overflow = '';
+                const want = preferredTab && PUBLIC_TABS.has(preferredTab) ? preferredTab : 'authEntry';
+                activateTab(want, getNavLinkForTab(want) || document.getElementById('navAuth'));
                 return;
             }
 
@@ -10090,14 +10378,14 @@
             const currentActiveId = document.querySelector('.section.active')?.id;
             const targetTab = preferredTab && preferredTab !== 'authEntry'
                 ? preferredTab
-                : (PROTECTED_TABS.has(currentActiveId) ? currentActiveId : 'overview');
+                : (PROTECTED_TABS.has(currentActiveId) || PUBLIC_TABS.has(currentActiveId) ? currentActiveId : 'overview');
             activateTab(targetTab, getNavLinkForTab(targetTab));
         }
 
         function showTab(id, activeLink) {
             if (PROTECTED_TABS.has(id) && !Auth.isLoggedIn()) {
                 activateTab('authEntry', document.getElementById('navAuth'));
-                openAuthModal('signin', null, { forceLock: true });
+                showToast('Sign in required', 'Request access or sign in to open training videos and certificates.', 'warning', 4500);
                 return;
             }
 
@@ -11433,13 +11721,5 @@
     <script src="user-sync.js"></script>
     <!-- Firebase Authentication (email/password) for real accounts -->
     <script src="auth-service.js"></script>
-<script>
-        /* Public build: account and checkout flows are disabled pending the new
-           auth provider. Any code path that would open them routes to email. */
-        window.openAuthModal = function(mode, cb) { if (typeof cb === 'function') cb(); };
-        window.openCheckout = function(planId, billingCycle) {
-            window.location.href = 'mailto:labs@cromptonapps.com?subject=Crompton%20Academy%20access%20request';
-        };
-        </script>
-    </body>
+</body>
 </html>
